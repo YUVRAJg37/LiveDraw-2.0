@@ -1,4 +1,5 @@
 import { create } from "zustand";
+import { Shape, ShapeType } from "../Interfaces/Shape";
 
 export enum DrawingMode {
   SHAPE,
@@ -6,38 +7,9 @@ export enum DrawingMode {
   ERASE,
 }
 
-export enum ShapeType {
-  BOX,
-  ELLIPSE,
-  LINE,
-}
-
-export interface Shape {
-  shapeType: ShapeType;
-  x: number;
-  y: number;
-}
-
-export interface BoxShape extends Shape {
-  width: number;
-  height: number;
-}
-
-export interface EllipseShape extends Shape {
-  radiusX: number;
-  radiusY: number;
-}
-
-export interface LineShape extends Shape {
-  endX: number;
-  endY: number;
-}
-
 interface IDrawingStore {
   canvasRef: HTMLCanvasElement | null;
   ctx: CanvasRenderingContext2D | null;
-  startingPos: { x: number; y: number };
-  setStartingPos: (pos: { x: number; y: number }) => void;
   isPaintMode: boolean;
   setPaintMode: (isPaintMode: boolean) => void;
   drawingMode: DrawingMode;
@@ -51,8 +23,6 @@ interface IDrawingStore {
 const DrawingStore = create<IDrawingStore>((set) => ({
   canvasRef: null,
   ctx: null,
-  startingPos: { x: 0, y: 0 },
-  setStartingPos: (pos) => set(() => ({ startingPos: pos })),
   isPaintMode: false,
   setPaintMode: (value) => set(() => ({ isPaintMode: value })),
   drawingMode: DrawingMode.SHAPE,
