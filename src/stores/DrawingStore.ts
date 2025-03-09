@@ -8,17 +8,30 @@ export enum DrawingMode {
 
 export enum ShapeType {
   BOX,
-  CIRCLE,
+  ELLIPSE,
   LINE,
 }
 
-type Shape = {
+export interface Shape {
   shapeType: ShapeType;
   x: number;
   y: number;
+}
+
+export interface BoxShape extends Shape {
   width: number;
   height: number;
-};
+}
+
+export interface EllipseShape extends Shape {
+  radiusX: number;
+  radiusY: number;
+}
+
+export interface LineShape extends Shape {
+  endX: number;
+  endY: number;
+}
 
 interface IDrawingStore {
   canvasRef: HTMLCanvasElement | null;
@@ -29,6 +42,7 @@ interface IDrawingStore {
   setPaintMode: (isPaintMode: boolean) => void;
   drawingMode: DrawingMode;
   shapeType: ShapeType;
+  setShapeType: (shapeType: ShapeType) => void;
   shapes: Shape[];
   addShape: (shape: Shape) => void;
   clearShapes: () => void;
@@ -42,7 +56,8 @@ const DrawingStore = create<IDrawingStore>((set) => ({
   isPaintMode: false,
   setPaintMode: (value) => set(() => ({ isPaintMode: value })),
   drawingMode: DrawingMode.SHAPE,
-  shapeType: ShapeType.BOX,
+  shapeType: ShapeType.ELLIPSE,
+  setShapeType: (type) => set(() => ({ shapeType: type })),
   shapes: [],
   addShape: (shape) => set((state) => ({ shapes: [...state.shapes, shape] })),
   clearShapes: () => set(() => ({ shapes: [] })),
