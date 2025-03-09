@@ -8,25 +8,14 @@ import {
 } from "../Interfaces/Shape";
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import DrawingStore from "../stores/DrawingStore";
-import { EventStore } from "../stores/EventStore";
-import { useCommonUtils, useMousePosition } from "../Utils/useCommonUtils";
+import { useCommonUtils } from "../Utils/useCommonUtils";
 
 function DrawingCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const { mousePos, setMousePos, setBoundingRect } = EventStore(
-    useShallow((state) => ({
-      mousePos: state.mousePos,
-      setMousePos: state.setMousePos,
-      setBoundingRect: state.setBoundingRect,
-    }))
-  );
-
   const { DrawBox, DrawEllipse, DrawLine } = useCommonUtils();
-  const mousePosition = useMousePosition();
   const [startingPos, setStartingPos] = useState({ x: 0, y: 0 });
-
-  console.log("test");
+  const mousePositionRef = useRef({ x: 0, y: 0 });
 
   const { ctx, isPaintMode, setPaintMode, addShape, shapes, shapeType } =
     DrawingStore(
@@ -49,8 +38,6 @@ function DrawingCanvas() {
       canvasRef.current.width = window.innerWidth;
       canvasRef.current.height = window.innerHeight;
 
-      setBoundingRect(canvasRef.current.getBoundingClientRect());
-
       const renderCtx = canvasRef.current.getContext("2d");
       if (renderCtx) {
         DrawingStore.setState({ ctx: renderCtx });
@@ -58,24 +45,21 @@ function DrawingCanvas() {
     }
   }, [canvasRef]);
 
-  const onMouseDown = () => {
+  const onMouseDown = (event: MouseEvent) => {
     if (canvasRef.current === null) return;
     setPaintMode(true);
-    setStartingPos(mousePosition);
-    console.log(shapes);
+    setStartingPos(GetMousePosition(event.clientX, event.clientY));
   };
 
   const onMouseUp = () => {
     setPaintMode(false);
     const currentShape = GetCurrentShape();
     if (currentShape) addShape(currentShape);
-    console.log(currentShape);
   };
 
-  const onMouseMove = (Event: MouseEvent) => {
-    setMousePos({ x: Event.clientX, y: Event.clientY });
+  const onMouseMove = (event: MouseEvent) => {
     if (!isPaintMode) return;
-
+    mousePositionRef.current = GetMousePosition(event.clientX, event.clientY);
     Draw();
   };
 
@@ -100,12 +84,12 @@ function DrawingCanvas() {
           shapeType: shapeType,
           x: startingPos.x,
           y: startingPos.y,
-          width: mousePos.x - startingPos.x,
-          height: mousePos.y - startingPos.y,
+          width: mousePositionRef.current.x - startingPos.x,
+          height: mousePositionRef.current.y - startingPos.y,
         } as BoxShape;
       case ShapeType.ELLIPSE:
-        const radiusX = (mousePos.x - startingPos.x) / 2;
-        const radiusY = (mousePos.y - startingPos.y) / 2;
+        const radiusX = (mousePositionRef.current.x - startingPos.x) / 2;
+        const radiusY = (mousePositionRef.current.y - startingPos.y) / 2;
         return {
           shapeType: shapeType,
           x: startingPos.x + radiusX,
@@ -118,8 +102,8 @@ function DrawingCanvas() {
           shapeType: shapeType,
           x: startingPos.x,
           y: startingPos.y,
-          endX: mousePos.x,
-          endY: mousePos.y,
+          endX: mousePositionRef.current.x,
+          endY: mousePositionRef.current.y,
         } as LineShape;
       default:
     }
@@ -146,6 +130,16 @@ function DrawingCanvas() {
     ctx.lineWidth = 4;
     ctx.lineCap = "round";
     ctx.stroke();
+  };
+
+  const GetMousePosition = (clientX: number, clientY: number) => {
+    if (canvasRef.current === null) return { x: 0, y: 0 };
+
+    const rect = canvasRef.current.getBoundingClientRect();
+    return {
+      x: clientX - rect.left,
+      y: clientY - rect.top,
+    };
   };
 
   return (
