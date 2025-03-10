@@ -8,16 +8,15 @@ import {
 } from "../Interfaces/Shape";
 import { MouseEvent, useEffect, useRef, useState } from "react";
 import DrawingStore, { DrawingMode } from "../stores/DrawingStore";
-import { useCommonUtils } from "../Utils/useCommonUtils";
 
 function DrawingCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
-  const { DrawBox, DrawEllipse, DrawLine } = useCommonUtils();
   const [currentStroke, setCurrentStroke] = useState<LineShape[]>([]);
   const [startingPos, setStartingPos] = useState({ x: 0, y: 0 });
   const mousePositionRef = useRef({ x: 0, y: 0 });
   const lastMousePositionRef = useRef({ x: 0, y: 0 });
+  const currentShapeRef = useRef<Shape | null>(new Shape(0, 0));
 
   const {
     ctx,
@@ -63,6 +62,15 @@ function DrawingCanvas() {
     if (canvasRef.current === null) return;
     setPaintMode(true);
     setStartingPos(GetMousePosition(event.clientX, event.clientY));
+
+    if (drawingMode === DrawingMode.SHAPE) {
+      const currentShape = GetCurrentShape();
+      if (currentShape) {
+        currentShapeRef.current = currentShape;
+        addShape(currentShape);
+      }
+    }
+
     lastMousePositionRef.current = GetMousePosition(
       event.clientX,
       event.clientY
@@ -72,13 +80,7 @@ function DrawingCanvas() {
   const onMouseUp = () => {
     setPaintMode(false);
 
-    const currentShape = GetCurrentShape();
-    if (currentShape) {
-      if (drawingMode === DrawingMode.FREEHAND) {
-        setCurrentStroke([...currentStroke, currentShape as LineShape]);
-      } else addShape(currentShape);
-    }
-
+    currentShapeRef.current = null;
     setCurrentStroke([]);
     setStrokes([...strokes, currentStroke]);
   };
@@ -95,91 +97,100 @@ function DrawingCanvas() {
 
     ctx.clearRect(0, 0, window.innerWidth, window.innerHeight);
 
-    const currentShape = GetCurrentShape();
-
-    if (currentShape) DrawShape(currentShape);
-    if (currentShape && drawingMode === DrawingMode.FREEHAND) {
-      setCurrentStroke([...currentStroke, currentShape as LineShape]);
+    if (drawingMode === DrawingMode.FREEHAND) {
+      const currentShape = GetCurrentShape();
+      if (currentShape) {
+        setCurrentStroke([...currentStroke, currentShape as LineShape]);
+      }
+    } else {
+      UpdateShapes();
     }
 
     shapes.forEach((shape) => {
-      DrawShape(shape);
+      shape.draw(ctx);
     });
 
     strokes.forEach((stroke) => {
       stroke.forEach((line) => {
-        DrawShape(line);
+        line.draw(ctx);
       });
     });
 
     currentStroke.forEach((line) => {
-      DrawShape(line);
+      line.draw(ctx);
     });
   };
 
   const GetCurrentShape = () => {
     if (drawingMode !== DrawingMode.SHAPE) {
-      return {
-        shapeType: ShapeType.LINE,
-        x: lastMousePositionRef.current.x,
-        y: lastMousePositionRef.current.y,
-        endX: mousePositionRef.current.x,
-        endY: mousePositionRef.current.y,
-      } as LineShape;
+      return new LineShape(
+        lastMousePositionRef.current.x,
+        lastMousePositionRef.current.y,
+        mousePositionRef.current.x,
+        mousePositionRef.current.y
+      );
     }
 
     switch (shapeType) {
       case ShapeType.BOX:
-        return {
-          shapeType: shapeType,
-          x: startingPos.x,
-          y: startingPos.y,
-          width: mousePositionRef.current.x - startingPos.x,
-          height: mousePositionRef.current.y - startingPos.y,
-        } as BoxShape;
+        return new BoxShape(
+          startingPos.x,
+          startingPos.y,
+          mousePositionRef.current.x - startingPos.x,
+          mousePositionRef.current.y - startingPos.y
+        );
       case ShapeType.ELLIPSE:
         const radiusX = (mousePositionRef.current.x - startingPos.x) / 2;
         const radiusY = (mousePositionRef.current.y - startingPos.y) / 2;
-        return {
-          shapeType: shapeType,
-          x: startingPos.x + radiusX,
-          y: startingPos.y + radiusY,
-          radiusX: Math.abs(radiusX),
-          radiusY: Math.abs(radiusY),
-        } as EllipseShape;
+        return new EllipseShape(
+          startingPos.x + radiusX,
+          startingPos.y + radiusY,
+          Math.abs(radiusX),
+          Math.abs(radiusY)
+        );
       case ShapeType.LINE:
-        return {
-          shapeType: shapeType,
-          x: startingPos.x,
-          y: startingPos.y,
-          endX: mousePositionRef.current.x,
-          endY: mousePositionRef.current.y,
-        } as LineShape;
+        return new LineShape(
+          startingPos.x,
+          startingPos.y,
+          mousePositionRef.current.x,
+          mousePositionRef.current.y
+        );
       default:
     }
   };
 
-  const DrawShape = (shape: Shape) => {
-    if (ctx === null) return;
-
-    ctx.beginPath();
-
-    switch (shape.shapeType) {
-      case ShapeType.BOX:
-        DrawBox(shape as BoxShape);
-        break;
-      case ShapeType.ELLIPSE:
-        DrawEllipse(shape as EllipseShape);
-        break;
-      case ShapeType.LINE:
-        DrawLine(shape as LineShape);
-        break;
-      default:
+  const UpdateShapes = () => {
+    if (currentShapeRef.current instanceof BoxShape) {
+      currentShapeRef.current.setBounds(
+        startingPos.x,
+        startingPos.y,
+        mousePositionRef.current.x - startingPos.x,
+        mousePositionRef.current.y - startingPos.y
+      );
+      return;
     }
 
-    ctx.lineWidth = 4;
-    ctx.lineCap = "round";
-    ctx.stroke();
+    if (currentShapeRef.current instanceof EllipseShape) {
+      const radiusX = (mousePositionRef.current.x - startingPos.x) / 2;
+      const radiusY = (mousePositionRef.current.y - startingPos.y) / 2;
+      currentShapeRef.current.setBounds(
+        startingPos.x + radiusX,
+        startingPos.y + radiusY,
+        Math.abs(radiusX),
+        Math.abs(radiusY)
+      );
+      return;
+    }
+
+    if (currentShapeRef.current instanceof LineShape) {
+      currentShapeRef.current.setBounds(
+        startingPos.x,
+        startingPos.y,
+        mousePositionRef.current.x,
+        mousePositionRef.current.y
+      );
+      return;
+    }
   };
 
   const GetMousePosition = (clientX: number, clientY: number) => {
