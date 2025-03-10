@@ -4,7 +4,7 @@ export enum ShapeType {
   LINE,
 }
 
-export class Shape {
+export abstract class Shape {
   x: number;
   y: number;
   lineWidth: number;
@@ -15,18 +15,13 @@ export class Shape {
     this.lineWidth = 4;
   }
 
-  draw(ctx: CanvasRenderingContext2D) {
-    throw new Error("draw() method must be implemented in subclasses");
-  }
-
+  abstract draw(ctx: CanvasRenderingContext2D): void;
   setPosition(x: number, y: number) {
     this.x = x;
     this.y = y;
   }
 
-  setBounds(...args: any[]) {
-    throw new Error("setBound() method must be implemented in subclasses");
-  }
+  abstract setBounds(...args: any[]): void;
 
   setLineWidth(width: number) {
     this.lineWidth = width;

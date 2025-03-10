@@ -16,7 +16,7 @@ function DrawingCanvas() {
   const [startingPos, setStartingPos] = useState({ x: 0, y: 0 });
   const mousePositionRef = useRef({ x: 0, y: 0 });
   const lastMousePositionRef = useRef({ x: 0, y: 0 });
-  const currentShapeRef = useRef<Shape | null>(new Shape(0, 0));
+  const currentShapeRef = useRef<Shape | null>(null);
 
   const {
     ctx,
