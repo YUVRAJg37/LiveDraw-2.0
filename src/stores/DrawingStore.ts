@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { Shape, ShapeType } from "../Interfaces/Shape";
+import { LineShape, Shape, ShapeType } from "../Interfaces/Shape";
 
 export enum DrawingMode {
   SHAPE,
@@ -13,11 +13,14 @@ interface IDrawingStore {
   isPaintMode: boolean;
   setPaintMode: (isPaintMode: boolean) => void;
   drawingMode: DrawingMode;
+  setDrawingMode: (mode: DrawingMode) => void;
   shapeType: ShapeType;
   setShapeType: (shapeType: ShapeType) => void;
   shapes: Shape[];
   addShape: (shape: Shape) => void;
   clearShapes: () => void;
+  strokes: LineShape[][];
+  setStrokes: (strokes: LineShape[][]) => void;
 }
 
 const DrawingStore = create<IDrawingStore>((set) => ({
@@ -26,11 +29,14 @@ const DrawingStore = create<IDrawingStore>((set) => ({
   isPaintMode: false,
   setPaintMode: (value) => set(() => ({ isPaintMode: value })),
   drawingMode: DrawingMode.SHAPE,
+  setDrawingMode: (mode) => set(() => ({ drawingMode: mode })),
   shapeType: ShapeType.ELLIPSE,
   setShapeType: (type) => set(() => ({ shapeType: type })),
   shapes: [],
   addShape: (shape) => set((state) => ({ shapes: [...state.shapes, shape] })),
-  clearShapes: () => set(() => ({ shapes: [] })),
+  clearShapes: () => set(() => ({ shapes: [], strokes: [] })),
+  strokes: [],
+  setStrokes: (strokes) => set(() => ({ strokes })),
 }));
 
 export default DrawingStore;

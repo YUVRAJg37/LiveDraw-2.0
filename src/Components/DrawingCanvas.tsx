@@ -7,29 +7,43 @@ import {
   ShapeType,
 } from "../Interfaces/Shape";
 import { MouseEvent, useEffect, useRef, useState } from "react";
-import DrawingStore from "../stores/DrawingStore";
+import DrawingStore, { DrawingMode } from "../stores/DrawingStore";
 import { useCommonUtils } from "../Utils/useCommonUtils";
 
 function DrawingCanvas() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   const { DrawBox, DrawEllipse, DrawLine } = useCommonUtils();
+  const [currentStroke, setCurrentStroke] = useState<LineShape[]>([]);
   const [startingPos, setStartingPos] = useState({ x: 0, y: 0 });
   const mousePositionRef = useRef({ x: 0, y: 0 });
+  const lastMousePositionRef = useRef({ x: 0, y: 0 });
 
-  const { ctx, isPaintMode, setPaintMode, addShape, shapes, shapeType } =
-    DrawingStore(
-      useShallow((state) => ({
-        ctx: state.ctx,
-        isPaintMode: state.isPaintMode,
-        setPaintMode: state.setPaintMode,
-        addShape: state.addShape,
-        shapes: state.shapes,
-        clearShapes: state.clearShapes,
-        shapeType: state.shapeType,
-        setShapeType: state.setShapeType,
-      }))
-    );
+  const {
+    ctx,
+    isPaintMode,
+    setPaintMode,
+    addShape,
+    shapes,
+    shapeType,
+    drawingMode,
+    strokes,
+    setStrokes,
+  } = DrawingStore(
+    useShallow((state) => ({
+      ctx: state.ctx,
+      isPaintMode: state.isPaintMode,
+      setPaintMode: state.setPaintMode,
+      addShape: state.addShape,
+      shapes: state.shapes,
+      clearShapes: state.clearShapes,
+      shapeType: state.shapeType,
+      setShapeType: state.setShapeType,
+      drawingMode: state.drawingMode,
+      strokes: state.strokes,
+      setStrokes: state.setStrokes,
+    }))
+  );
 
   useEffect(() => {
     if (canvasRef.current) {
@@ -49,18 +63,31 @@ function DrawingCanvas() {
     if (canvasRef.current === null) return;
     setPaintMode(true);
     setStartingPos(GetMousePosition(event.clientX, event.clientY));
+    lastMousePositionRef.current = GetMousePosition(
+      event.clientX,
+      event.clientY
+    );
   };
 
   const onMouseUp = () => {
     setPaintMode(false);
+
     const currentShape = GetCurrentShape();
-    if (currentShape) addShape(currentShape);
+    if (currentShape) {
+      if (drawingMode === DrawingMode.FREEHAND) {
+        setCurrentStroke([...currentStroke, currentShape as LineShape]);
+      } else addShape(currentShape);
+    }
+
+    setCurrentStroke([]);
+    setStrokes([...strokes, currentStroke]);
   };
 
   const onMouseMove = (event: MouseEvent) => {
     if (!isPaintMode) return;
     mousePositionRef.current = GetMousePosition(event.clientX, event.clientY);
     Draw();
+    lastMousePositionRef.current = mousePositionRef.current;
   };
 
   const Draw = () => {
@@ -71,13 +98,36 @@ function DrawingCanvas() {
     const currentShape = GetCurrentShape();
 
     if (currentShape) DrawShape(currentShape);
+    if (currentShape && drawingMode === DrawingMode.FREEHAND) {
+      setCurrentStroke([...currentStroke, currentShape as LineShape]);
+    }
 
     shapes.forEach((shape) => {
       DrawShape(shape);
     });
+
+    strokes.forEach((stroke) => {
+      stroke.forEach((line) => {
+        DrawShape(line);
+      });
+    });
+
+    currentStroke.forEach((line) => {
+      DrawShape(line);
+    });
   };
 
   const GetCurrentShape = () => {
+    if (drawingMode !== DrawingMode.SHAPE) {
+      return {
+        shapeType: ShapeType.LINE,
+        x: lastMousePositionRef.current.x,
+        y: lastMousePositionRef.current.y,
+        endX: mousePositionRef.current.x,
+        endY: mousePositionRef.current.y,
+      } as LineShape;
+    }
+
     switch (shapeType) {
       case ShapeType.BOX:
         return {

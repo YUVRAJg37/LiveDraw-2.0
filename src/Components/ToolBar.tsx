@@ -1,12 +1,13 @@
 import { useShallow } from "zustand/shallow";
-import DrawingStore from "../stores/DrawingStore";
+import DrawingStore, { DrawingMode } from "../stores/DrawingStore";
 import { ShapeType } from "../Interfaces/Shape";
 
 function ToolBar() {
-  const { clearShapes, setShapeType, ctx } = DrawingStore(
+  const { clearShapes, setShapeType, setDrawingMode, ctx } = DrawingStore(
     useShallow((state) => ({
       clearShapes: state.clearShapes,
       setShapeType: state.setShapeType,
+      setDrawingMode: state.setDrawingMode,
       ctx: state.ctx,
     }))
   );
@@ -39,7 +40,10 @@ function ToolBar() {
           width: 100,
           height: 50,
         }}
-        onClick={() => setShapeType(ShapeType.BOX)}
+        onClick={() => {
+          setDrawingMode(DrawingMode.SHAPE);
+          setShapeType(ShapeType.BOX);
+        }}
       >
         Box
       </button>
@@ -51,7 +55,10 @@ function ToolBar() {
           width: 100,
           height: 50,
         }}
-        onClick={() => setShapeType(ShapeType.ELLIPSE)}
+        onClick={() => {
+          setDrawingMode(DrawingMode.SHAPE);
+          setShapeType(ShapeType.ELLIPSE);
+        }}
       >
         Circle
       </button>
@@ -63,9 +70,24 @@ function ToolBar() {
           width: 100,
           height: 50,
         }}
-        onClick={() => setShapeType(ShapeType.LINE)}
+        onClick={() => {
+          setDrawingMode(DrawingMode.SHAPE);
+          setShapeType(ShapeType.LINE);
+        }}
       >
         Line
+      </button>
+      <button
+        style={{
+          position: "absolute",
+          top: 250,
+          left: 10,
+          width: 100,
+          height: 50,
+        }}
+        onClick={() => setDrawingMode(DrawingMode.FREEHAND)}
+      >
+        Draw
       </button>
     </div>
   );
